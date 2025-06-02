@@ -67,18 +67,21 @@ def source_aggregator(state:State):
     queries = state.get("search_queries_arxiv", [])
     queries_SS = state.get("search_queries_semanticscholar", [])
     for q in queries:
-        print(f"Searching for: {q}")
-        st.write(f"Searching for: {q}")
-        loader = ArxivLoader(
-            query=q,
-            load_max_docs=1,
-            load_all_available_meta=False
-        )
-        docs = loader.load()
-        Arxiv.append(docs[0].page_content[:4000])
-        info_message = f"Information gathered from arxiv: {Arxiv}"
-        print(info_message)
-
+        try:
+            print(f"Searching for: {q}")
+            st.write(f"Searching for: {q}")
+            loader = ArxivLoader(
+                query=q,
+                load_max_docs=1,
+            )
+            docs = loader.get_summaries_as_docs()
+            Arxiv.append(docs)
+            info_message = f"Information gathered: {Arxiv}"
+            print(info_message)
+        except Exception as e:
+            print(f"Error occurred: {e}")
+            st.write(f"Error occurred: {e}")
+            Arxiv.append(f"Error occurred: {e}")
 
     for qs in queries_SS:
         print(f"Searching for: {qs}")
