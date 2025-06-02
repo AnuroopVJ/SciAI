@@ -17,7 +17,7 @@ load_dotenv()
 
 llm = init_chat_model(
     "groq:llama3-8b-8192",
-    api_key = "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"
+    api_key = st.secrests["GROQ_API_KEY"]
 )
 
 
