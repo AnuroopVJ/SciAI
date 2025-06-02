@@ -1,0 +1,6 @@
+python-dotenv
+langgraph
+langchain
+langchain-community
+streamlit
+semanticscholar
