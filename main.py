@@ -45,7 +45,7 @@ def parse_headings_and_body(text):
     paragraphs = []
     for line in text.strip().split("\n"):
         line = line.strip()
-        if line.startswith("**[") and "]**" in line:
+        if line.startswith("**") and "**" in line:
             heading = line[3:line.index("]**")]
             paragraphs.append(("heading", heading))
         elif line:
