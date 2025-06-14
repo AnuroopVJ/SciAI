@@ -9,23 +9,27 @@ from langchain_community.document_loaders import ArxivLoader
 from semanticscholar import SemanticScholar
 from langchain_community.utilities.semanticscholar import SemanticScholarAPIWrapper
 import streamlit as st
-import tempfile
 import os
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 
-
+# Load environment variables
 load_dotenv()
 
+# Auth key
 api_key = st.secrets["GROQ_API_KEY"]
 
+# Initialize LLM
 llm = init_chat_model(
     "groq:llama3-8b-8192",
-    api_key = api_key
+    api_key=api_key
 )
 
 if api_key:
     print("Auth_key_found")
     st.info("Auth_key_found")
-
 
 Arxiv = []
 ss = []
@@ -36,8 +40,50 @@ sch = SemanticScholarAPIWrapper(
     load_max_docs=3
 )
 
+# --- PDF Generator ---
+def parse_headings_and_body(text):
+    paragraphs = []
+    for line in text.strip().split("\n"):
+        line = line.strip()
+        if line.startswith("**[") and "]**" in line:
+            heading = line[3:line.index("]**")]
+            paragraphs.append(("heading", heading))
+        elif line:
+            paragraphs.append(("body", line))
+    return paragraphs
 
-#setting up state graph
+def generate_pdf(parsed_resp: str, logo_path=None):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Heading', parent=styles['Heading1'], fontSize=16, spaceAfter=10, spaceBefore=10)
+    body_style = styles['BodyText']
+
+    elements = []
+
+    # Add logo if provided
+    if logo_path:
+        try:
+            elements.append(Image(logo_path, width=50, height=50))
+            elements.append(Spacer(1, 12))
+        except:
+            pass
+
+    content = parse_headings_and_body(parsed_resp)
+
+    for kind, text in content:
+        if kind == "heading":
+            elements.append(Paragraph(text, title_style))
+        else:
+            elements.append(Paragraph(text, body_style))
+        elements.append(Spacer(1, 8))
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+# --- LangGraph State Definitions ---
 class State(TypedDict):
     messages: Annotated[list, add_messages]
     search_queries_arxiv: list[str]
@@ -47,6 +93,7 @@ class Search_query(BaseModel):
     queries_arxiv: list[str] = Field(..., description="list of queries for serching arxiv")
     queries_semanticscholar: list[str] = Field(..., description="list of queries for serching semanticscholar")
 
+# Build LangGraph
 graph_builder = StateGraph(State)
 
 def query_construct(state: State):
@@ -58,65 +105,47 @@ def query_construct(state: State):
 
     search_query_obj = structured_llm.invoke(prompt)
 
-    # Safely extract queries whether search_query_obj is a BaseModel or dict
     if isinstance(search_query_obj, dict):
         queries_arxiv = search_query_obj.get("queries_arxiv", [])
         queries_semanticscholar = search_query_obj.get("queries_semanticscholar", [])
     else:
         queries_arxiv = getattr(search_query_obj, "queries_arxiv", [])
         queries_semanticscholar = getattr(search_query_obj, "queries_semanticscholar", [])
+
     return {"search_queries_arxiv": queries_arxiv, "search_queries_semanticscholar": queries_semanticscholar}
 
-
-def source_aggregator(state:State):
+def source_aggregator(state: State):
     queries = state.get("search_queries_arxiv", [])
     queries_SS = state.get("search_queries_semanticscholar", [])
+
     for q in queries:
         try:
-            print(f"Searching for: {q}")
-            st.write(f"Searching for: {q}")
-            loader = ArxivLoader(
-                query=q,
-                load_max_docs=1,
-            )
+            st.write(f"Searching Arxiv for: {q}")
+            loader = ArxivLoader(query=q, load_max_docs=1)
             docs = loader.get_summaries_as_docs()
             Arxiv.append(docs)
-            info_message = f"Information gathered: {Arxiv}"
-            print(info_message)
         except Exception as e:
-            print(f"Error occurred: {e}")
-            st.write(f"Error occurred: {e}")
-            Arxiv.append(f"Error occurred: {e}")
+            st.write(f"Error: {e}")
+            Arxiv.append(f"Error: {e}")
 
     for qs in queries_SS:
-        print(f"Searching for: {qs}")
-        st.write(f"Searching for: {qs}")
+        st.write(f"Searching SemanticScholar for: {qs}")
         r = sch.run(qs)
-        if isinstance(r, dict):
-            ss.append(r.get('abstract', ''))
-        else:
-            ss.append(None)
-        print(r)
-        info_message_S = f"Information gathered from other sources: {ss}"
-        print(info_message_S)
-    
-    
-    combined_info = f"Arxiv: {Arxiv}\nSemanticScholar: {ss}"
-    print("-----------combined-info-----------",combined_info)
-    return {"messages": [{"role": "system", "content": combined_info}]}
+        ss.append(r.get('abstract', '') if isinstance(r, dict) else None)
 
+    combined_info = f"Arxiv: {Arxiv}\nSemanticScholar: {ss}"
+    return {"messages": [{"role": "system", "content": combined_info}]}
 
 def data_synthesis(state: State):
     return {"messages": [llm.invoke(state["messages"])]}
 
-
+# --- Streamlit UI ---
 st.title("SciAI")
 usr_inp = st.text_input("Enter your query:")
 
-
-if st.button("Analyze") and usr_inp != None:
+if st.button("Analyze") and usr_inp:
     with st.spinner("Preparing your report..."):
-        #building graph
+        # Build graph
         graph_builder.add_node("query_construct", query_construct)
         graph_builder.add_node("source_aggregator", source_aggregator)
         graph_builder.add_node("data_synthesis", data_synthesis)
@@ -126,25 +155,20 @@ if st.button("Analyze") and usr_inp != None:
         graph_builder.add_edge("source_aggregator", "data_synthesis")
         graph_builder.add_edge("data_synthesis", END)
 
-        #compile
         graph = graph_builder.compile()
-
-
         state = graph.invoke({"messages": [{"role": "user", "content": usr_inp}], "search_queries": []})
-        print(state['messages'][-1].content)
+
         parsed_resp = state['messages'][-1].content
-        print(parsed_resp)
         st.write(parsed_resp)
 
-        report_file = tempfile.TemporaryFile()
+        # Generate PDF
+        pdf_file = generate_pdf(parsed_resp)
 
-    # Encode the string to bytes before writing
-    report_bytes = parsed_resp.encode('utf-8')
-
-    st.download_button(
-    label="Download Report",
-    data=report_bytes,
-    file_name="report.txt",
-    mime="text/csv",
-    icon=":material/download:",)
-
+        # Download button
+        st.download_button(
+            label="Download PDF Report",
+            data=pdf_file,
+            file_name="SciAI_Report.pdf",
+            mime="application/pdf",
+            icon="📄",
+        )
