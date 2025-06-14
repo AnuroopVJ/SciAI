@@ -162,7 +162,7 @@ if st.button("Analyze") and usr_inp:
         st.write(parsed_resp)
 
         # Generate PDF
-        pdf_file = generate_pdf(parsed_resp)
+        pdf_file = generate_pdf(parsed_resp,logo_path="logo.png")
 
         # Download button
         st.download_button(
