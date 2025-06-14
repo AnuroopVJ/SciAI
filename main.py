@@ -15,11 +15,16 @@ import os
 
 load_dotenv()
 
+api_key = st.secrets["GROQ_API_KEY"]
+
 llm = init_chat_model(
     "groq:llama3-8b-8192",
-    api_key = st.secrets["GROQ_API_KEY"]
+    api_key = api_key
 )
 
+if api_key:
+    print("Auth_key_found")
+    st.info("Auth_key_found")
 
 
 Arxiv = []
