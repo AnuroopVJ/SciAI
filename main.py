@@ -1,3 +1,4 @@
+
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -10,8 +11,10 @@ from semanticscholar import SemanticScholar
 from langchain_community.utilities.semanticscholar import SemanticScholarAPIWrapper
 import streamlit as st
 import os
-from fpdf import FPDF
+
 from io import BytesIO
+import subprocess
+import sys
 # Load environment variables
 load_dotenv()
 
@@ -49,52 +52,6 @@ def parse_headings_and_body(text):
             paragraphs.append(("body", line))
     return paragraphs
 
-def generate_pdf(parsed_resp: str, logo_path=None) -> BytesIO:
-    buffer = BytesIO()
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-
-    # Title style
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "Summary", ln=True)
-
-    # Body style
-    pdf.set_font("Arial", size=12)
-    for line in parsed_resp.split("\n"):
-        pdf.multi_cell(0, 10, line)
-
-    # Add logo if path is provided
-    if logo_path:
-        pdf.image(logo_path, x=10, y=8, w=33)
-
-    pdf.output(buffer)
-    buffer.seek(0)
-    return buffer
-
-    elements = []
-
-    # Add logo if provided
-    if logo_path:
-        try:
-            elements.append(Image(logo_path, width=50, height=50))
-            elements.append(Spacer(1, 12))
-        except:
-            pass
-
-    content = parse_headings_and_body(parsed_resp)
-
-    for kind, text in content:
-        if kind == "heading":
-            elements.append(Paragraph(text, title_style))
-        else:
-            elements.append(Paragraph(text, body_style))
-        elements.append(Spacer(1, 8))
-
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
 
 # --- LangGraph State Definitions ---
 class State(TypedDict):
@@ -173,15 +130,13 @@ if st.button("Analyze") and usr_inp:
 
         parsed_resp = state['messages'][-1].content
         st.write(parsed_resp)
-
-        # Generate PDF
-        pdf_file = generate_pdf(parsed_resp,logo_path="logo.png")
+        text_file = BytesIO(parsed_resp.encode('utf-8'))
 
         # Download button
         st.download_button(
             label="Download PDF Report",
-            data=pdf_file,
-            file_name="SciAI_Report.pdf",
-            mime="application/pdf",
+            data=text_file,
+            file_name="Report.txt",
+            mime="text/plain",
             icon="📄",
         )
