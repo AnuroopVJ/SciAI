@@ -10,11 +10,8 @@ from semanticscholar import SemanticScholar
 from langchain_community.utilities.semanticscholar import SemanticScholarAPIWrapper
 import streamlit as st
 import os
+from fpdf import FPDF
 from io import BytesIO
-
-
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-
 # Load environment variables
 load_dotenv()
 
@@ -52,13 +49,29 @@ def parse_headings_and_body(text):
             paragraphs.append(("body", line))
     return paragraphs
 
-def generate_pdf(parsed_resp: str, logo_path=None):
+def generate_pdf(parsed_resp: str, logo_path=None) -> BytesIO:
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
 
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Heading', parent=styles['Heading1'], fontSize=16, spaceAfter=10, spaceBefore=10)
-    body_style = styles['BodyText']
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Title style
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "Summary", ln=True)
+
+    # Body style
+    pdf.set_font("Arial", size=12)
+    for line in parsed_resp.split("\n"):
+        pdf.multi_cell(0, 10, line)
+
+    # Add logo if path is provided
+    if logo_path:
+        pdf.image(logo_path, x=10, y=8, w=33)
+
+    pdf.output(buffer)
+    buffer.seek(0)
+    return buffer
 
     elements = []
 
