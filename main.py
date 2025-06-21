@@ -12,7 +12,7 @@ import streamlit as st
 import os
 from io import BytesIO
 
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 
 # Load environment variables
