@@ -11,7 +11,7 @@ from langchain_community.utilities.semanticscholar import SemanticScholarAPIWrap
 import streamlit as st
 import os
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
+
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
 
