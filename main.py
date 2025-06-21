@@ -134,7 +134,7 @@ if st.button("Analyze") and usr_inp:
 
         # Download button
         st.download_button(
-            label="Download PDF Report",
+            label="Download Report (txt)",
             data=text_file,
             file_name="Report.txt",
             mime="text/plain",
