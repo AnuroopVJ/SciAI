@@ -1,3 +1,4 @@
+reportlab
 python-dotenv
 langgraph
 langchain
