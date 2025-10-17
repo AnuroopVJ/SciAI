@@ -21,6 +21,7 @@ load_dotenv()
 # Auth key
 api_key = st.secrets["GROQ_API_KEY"]
 st.title("📜SciAI")
+st.set_page_config(page_title="📜SciAI")
 # Initialize LLM
 llm = init_chat_model(
     "groq:llama-3.1-8b-instant",
@@ -110,7 +111,7 @@ def data_synthesis(state: State):
     return {"messages": [llm.invoke(state["messages"])]}
 
 # --- Streamlit UI ---
-st.title("SciAI")
+
 usr_inp = st.text_input("Enter your query:")
 
 if st.button("Analyze") and usr_inp:
