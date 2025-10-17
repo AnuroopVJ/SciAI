@@ -23,7 +23,7 @@ api_key = st.secrets["GROQ_API_KEY"]
 
 # Initialize LLM
 llm = init_chat_model(
-    "groq:llama3-8b-8192",
+    "groq:llama-3.1-8b-instant2",
     api_key=api_key
 )
 
