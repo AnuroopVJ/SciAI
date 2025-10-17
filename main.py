@@ -23,13 +23,13 @@ api_key = st.secrets["GROQ_API_KEY"]
 
 # Initialize LLM
 llm = init_chat_model(
-    "groq:llama-3.1-8b-instant2",
+    "groq:llama-3.1-8b-instant",
     api_key=api_key
 )
 
 if api_key:
     print("Auth_key_found")
-    st.info("Auth_key_found")
+
 
 Arxiv = []
 ss = []
