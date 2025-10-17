@@ -20,8 +20,9 @@ load_dotenv()
 
 # Auth key
 api_key = st.secrets["GROQ_API_KEY"]
-st.title("📜SciAI")
 st.set_page_config(page_title="📜SciAI")
+st.title("📜SciAI")
+
 # Initialize LLM
 llm = init_chat_model(
     "groq:llama-3.1-8b-instant",
